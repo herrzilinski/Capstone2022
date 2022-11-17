@@ -6,7 +6,7 @@ import pandas as pd
 from transformers import pipeline
 import time
 
-
+pd.set_option('max_columns', 19)
 # %%
 OR_PATH = os.getcwd()
 os.chdir("..")  # Change to the parent directory
@@ -34,5 +34,6 @@ classifier = pipeline("zero-shot-classification")
 start = time.time()
 result = classifier(text, candidate_labels=candidates,)
 end = time.time()
-print(f'Elasped time for zero-shooting one job ads is {end - start:.2f}s')
+print(f'Elapsed time for zero-shooting one job ads is {end - start:.2f}s')
 res_df = pd.DataFrame(result)
+print(res_df)
