@@ -7,7 +7,7 @@ import re
 import xml.etree.ElementTree as ET
 from joblib import Parallel, delayed
 from collections import Counter, defaultdict
-from pattern.en import pluralize, singularize
+# from pattern3.en import pluralize, singularize
 import numpy as np
 
 OR_PATH = os.getcwd()
@@ -275,7 +275,7 @@ for basis in techlist:
             keywords = {**keywords, **{word: word}}
             continue
         # dictionary: word in plural/singular forms to word
-        keywords = {**keywords, **{x: word for x in get_all_ps(word)}}
+        # keywords = {**keywords, **{x: word for x in get_all_ps(word)}}
 
 # ###########################################################
 # #------------------------Counting-------------------------#
@@ -290,16 +290,16 @@ years = [str(i) for i in range(start_year, end_year + 1) if i not in jump_year]
 
 # initialize output folder names
 for tech in techlist:
-    if not os.path.exists(out_dir_counts + 'counts\\' + tech):
-        os.makedirs(out_dir_counts + 'counts\\' + tech)
+    if not os.path.exists(OUT_DIR + os.path.sep + 'counts' + os.path.sep + tech):
+        os.makedirs(OUT_DIR + os.path.sep + 'counts' + os.path.sep + tech)
 
 for tech in techlist:
-    if not os.path.exists(out_dir_counts + 'snippets\\' + tech):
-        os.makedirs(out_dir_counts + 'snippets\\' + tech)
+    if not os.path.exists(OUT_DIR + os.path.sep + 'snippets' + os.path.sep + tech):
+        os.makedirs(OUT_DIR + os.path.sep + 'snippets' + os.path.sep + tech)
 
 # Count keywords in BG data
 for year in years:
-    files = os.listdir(text_dir_bg + year)
+    files = os.listdir(DATA_DIR + year)
     print("doing year: " + str(year))
     print("files in folder: " + str(len(files)))
     chunk_size = 60
@@ -313,6 +313,6 @@ for year in years:
         print("doing chunk: " + str(chunk))
         start = time.time()
         Parallel(n_jobs=1, verbose=10, backend='loky')(delayed(
-            count_words_mp)([text_dir_bg, year, file, out_dir_counts, keywords, basiswords]) for file in select_files)
+            count_words_mp)([DATA_DIR, year, file, OUT_DIR, keywords, basiswords]) for file in select_files)
         print('Total time: ' + '{:.2f}'.format((time.time() - start) / 60) + 'min')
 
