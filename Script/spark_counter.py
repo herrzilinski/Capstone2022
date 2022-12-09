@@ -16,7 +16,17 @@
 
 # COMMAND ----------
 
-df_raw=spark.read.format('com.databricks.spark.xml').options(rowTag='Job').load("/FileStore/data/US_XML_AddFeed_20100101_20100107.xml")
+import os
+file_list = [file.path for file in dbutils.fs.ls("/FileStore/data") if os.path.basename(file.path).endswith(".xml")]
+
+# COMMAND ----------
+
+file_list
+
+# COMMAND ----------
+
+df_raw=spark.read.format('com.databricks.spark.xml').options(rowTag='Job').load(','.join(file_list))
+#df_raw=spark.read.format('com.databricks.spark.xml').options(rowTag='Job').load("/FileStore/data/US_XML_AddFeed_20100101_20100107.xml")
 df_raw.show()
 
 # COMMAND ----------
@@ -87,12 +97,26 @@ count_res.write.parquet("/FileStore/data/bigram_count.parquet")
 
 # COMMAND ----------
 
+from pyspark.sql.types import IntegerType
 count_df = spark.read.parquet("/FileStore/data/bigram_count.parquet")
+count_df.withColumn("count", f.col("count").cast(IntegerType()))
 count_df.sort('count', ascending=False).show()
 
 # COMMAND ----------
 
-count_df.filter(count_df.bigram == 'electric vehicle').show()
+count_df.printSchema()
+
+# COMMAND ----------
+
+count_df.filter(count_df.bigram == 'renewable energy').show()
+
+# COMMAND ----------
+
+re_approx = count_df.filter((f.col("count") < 34) & (f.col("count") > 22))
+
+# COMMAND ----------
+
+re_approx.filter(f.col("bigram").contains('energy')).show(truncate=False)
 
 # COMMAND ----------
 
