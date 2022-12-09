@@ -43,10 +43,6 @@ df_raw.select("JobText").show(truncate=False)
 
 # COMMAND ----------
 
-# dbutils.fs.rm("/FileStore/data/US_XML_AddFeed_20100101_20100107.xml", True)
-
-# COMMAND ----------
-
 import pyspark.sql.functions as f
 from sparknlp.pretrained import PretrainedPipeline
 import sparknlp
@@ -85,11 +81,10 @@ df_bi.select("bigrams.result").show(2, truncate=200)
 # COMMAND ----------
 
 count_res = df_bi.withColumn('bigram', f.explode(f.col("bigrams.result"))).groupBy('bigram').count().sort('count', ascending=False)
-count_res.show(truncate=False)
 
 # COMMAND ----------
 
-count_res.count()
+# dbutils.fs.rm("/FileStore/data/bigram_count.parquet", True)
 
 # COMMAND ----------
 
@@ -104,6 +99,10 @@ count_df.sort('count', ascending=False).show()
 
 # COMMAND ----------
 
+count_df.count()
+
+# COMMAND ----------
+
 count_df.printSchema()
 
 # COMMAND ----------
@@ -112,11 +111,11 @@ count_df.filter(count_df.bigram == 'renewable energy').show()
 
 # COMMAND ----------
 
-re_approx = count_df.filter((f.col("count") < 34) & (f.col("count") > 22))
+re_approx = count_df.filter((f.col("count") < 124) & (f.col("count") > 23))
 
 # COMMAND ----------
 
-re_approx.filter(f.col("bigram").contains('energy')).show(truncate=False)
+re_approx.filter(f.col("bigram").contains('energy')).show(50, truncate=False)
 
 # COMMAND ----------
 
