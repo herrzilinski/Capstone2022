@@ -1,13 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Exploring reddit data using Spark
+# MAGIC # Exploring Synonymous Bigrams for LCT Keywords Using Spark
 # MAGIC 
-# MAGIC This notebook provides startup code for downloading Reddit data from the Azure Blob Storage bucket specifically setup for this project.   
-# MAGIC _<b>Make sure you are running this notebook on a cluster which has the credentials setup to access Azure Blob Storage, otherwise this notebook will not be able to read the data!</b>_
+# MAGIC This notebook provides startup code for loading .xml data and further processing for this project.   
+# MAGIC _<b>Make sure you are running this notebook on a cluster which use spark version 3.3.0, scala version 2.12 and has the spark-xml library (version 0.15.0) and spark-nlp (version 4.2.1) library installed, otherwise this notebook will not be able to read the data!</b>_
 # MAGIC 
 # MAGIC _<b>Make sure you are using DataBricks Runtime 11.3 or newer otherwise you will not be able to save any new files in this repository!</b>_
-# MAGIC 
-# MAGIC The dataset for this notebook is described in [The Pushshift Reddit Dataset](https://arxiv.org/pdf/2001.08435.pdf) paper.
 
 # COMMAND ----------
 
@@ -16,8 +14,17 @@
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Please place all .xml files under `DATA_PATH` (a path in DBFS that stores all xml files), and make sure no further directories are nested.
+
+# COMMAND ----------
+
+DATA_PATH = "/FileStore/data"
+
+# COMMAND ----------
+
 import os
-file_list = [file.path for file in dbutils.fs.ls("/FileStore/data") if os.path.basename(file.path).endswith(".xml")]
+file_list = [file.path for file in dbutils.fs.ls(DATA_PATH) if os.path.basename(file.path).endswith(".xml")]
 
 # COMMAND ----------
 
@@ -40,6 +47,11 @@ df_raw.printSchema()
 # COMMAND ----------
 
 df_raw.select("JobText").show(truncate=False)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Process Dataframe With Spark-nlp Pipeline
 
 # COMMAND ----------
 
@@ -80,6 +92,11 @@ df_bi.select("bigrams.result").show(2, truncate=200)
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Generate Bigram Count Dictionary
+
+# COMMAND ----------
+
 count_res = df_bi.withColumn('bigram', f.explode(f.col("bigrams.result"))).groupBy('bigram').count().sort('count', ascending=False)
 
 # COMMAND ----------
@@ -107,31 +124,34 @@ count_df.printSchema()
 
 # COMMAND ----------
 
-count_df.filter(count_df.bigram == 'renewable energy').show()
+# MAGIC %md
+# MAGIC ## Demo: Finding Synonymous Bigram for "renewable energy"
 
 # COMMAND ----------
 
-re_approx = count_df.filter((f.col("count") < 124) & (f.col("count") > 23))
+count_df.filter(count_df.bigram == 'renewable energy').show()
+re_num = count_df.filter(count_df.bigram == 'renewable energy').select("count").collect()[0]["count"]
+
+# COMMAND ----------
+
+threshold = 0.7
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC `threshold` is a hyperparameter that helps filter bigram counts. Only bigrams within the range of [base_bigram_count * (1-`threshold`), base_bigram_count * (1+`threshold`)] will be selected.
+# MAGIC Using larger threshold will give you more potential candidates, but requires more human effort to identify useful ones from the results.
+# MAGIC Using smaller threshold will save human effort, at risk of lossing synonym candidates.
+
+# COMMAND ----------
+
+re_approx = count_df.filter((f.col("count") < re_num*(1+threshold)) & (f.col("count") > re_num*(1-threshold)))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC After filtering, put a core keyword(in this case, 'energy') to narrow the search.
 
 # COMMAND ----------
 
 re_approx.filter(f.col("bigram").contains('energy')).show(50, truncate=False)
-
-# COMMAND ----------
-
-from pyspark.sql import SparkSession
-from sparknlp.pretrained import PretrainedPipeline
-import sparknlp
-from sparknlp.base import *
-from sparknlp.annotator import *
-import pyspark.sql.functions as f
-from pyspark.sql.functions import when, col
-from pyspark.ml.feature import CountVectorizer, IDF, HashingTF, SQLTransformer
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sparknlp.pretrained import PretrainedPipeline
-from pyspark.ml.linalg import Vectors
-# Start Spark Session with Spark NLP
-# spark = sparknlp.start()
