@@ -129,12 +129,17 @@ count_df.printSchema()
 
 # COMMAND ----------
 
-count_df.filter(count_df.bigram == 'renewable energy').show()
-re_num = count_df.filter(count_df.bigram == 'renewable energy').select("count").collect()[0]["count"]
+base_bigram = 'renewable energy'
+
+# COMMAND ----------
+
+count_df.filter(count_df.bigram == base_bigram).show()
+re_num = count_df.filter(count_df.bigram == base_bigram).select("count").collect()[0]["count"]
 
 # COMMAND ----------
 
 threshold = 0.7
+core_keyword = 'energy'
 
 # COMMAND ----------
 
@@ -154,4 +159,4 @@ re_approx = count_df.filter((f.col("count") < re_num*(1+threshold)) & (f.col("co
 
 # COMMAND ----------
 
-re_approx.filter(f.col("bigram").contains('energy')).show(50, truncate=False)
+re_approx.filter(f.col("bigram").contains(core_keyword)).show(100, truncate=False)
